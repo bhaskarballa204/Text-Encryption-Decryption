@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="VaultText is a browser-based text encryption and decryption tool using AES-256-GCM and PBKDF2.">
+<title>VaultText — Text Encryption Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--line:#263451;--text:#edf3ff;--muted:#9aabc8;--accent:#7c9cff;--accent2:#53dfc0;--danger:#ff7887}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 0%,#1c2b50 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{width:min(980px,calc(100% - 32px));margin:0 auto;padding:48px 0}.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#9d7cff);display:grid;place-items:center;font-size:23px}.brand strong{font-size:19px}.brand small{display:block;color:var(--muted);font-size:12px}
+header{margin-bottom:28px}h1{font-size:clamp(30px,5vw,45px);line-height:1.12;margin:0 0 12px}h1 span{color:#9db4ff}.intro{max-width:650px;color:var(--muted);margin:0}
+.card{background:linear-gradient(180deg,#17223b,#111a2d);border:1px solid var(--line);border-radius:20px;padding:24px}.tabs{display:flex;gap:8px;padding:5px;background:#0b1325;border:1px solid var(--line);border-radius:13px;width:max-content;margin-bottom:22px}.tab{border:0;background:transparent;color:var(--muted);padding:10px 18px;border-radius:9px;font-weight:650;cursor:pointer}.tab.active{background:#293b64;color:white}
+label{display:block;font-weight:650;margin:16px 0 8px}.hint{font-size:12px;color:var(--muted);font-weight:400;margin-left:5px}textarea,input{width:100%;border:1px solid #30415f;background:#0e1629;border-radius:12px;color:var(--text);padding:14px;font:14px/1.55 inherit;outline:none}textarea{min-height:145px;resize:vertical}input:focus,textarea:focus{border-color:var(--accent)}.passrow{display:flex;gap:8px}.passrow input{flex:1}.ghost{background:#202e49;border:1px solid #344767;color:#dce6ff;border-radius:10px;padding:0 14px;cursor:pointer}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.primary,.secondary{border:0;border-radius:11px;padding:12px 19px;font-weight:750;cursor:pointer}.primary{background:linear-gradient(100deg,#7998ff,#9b83ff);color:#081127}.secondary{background:#243451;color:#e4edff;border:1px solid #3a4e70}.primary:disabled{opacity:.5;cursor:not-allowed}
+.output-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:23px}.output-head label{margin:0 0 8px}.status{min-height:22px;color:var(--muted);font-size:13px;margin-top:12px}.status.ok{color:var(--accent2)}.status.err{color:var(--danger)}
+.note{margin-top:20px;padding:14px 16px;border-radius:12px;background:#101a2d;border:1px solid var(--line);color:var(--muted);font-size:13px}.note strong{color:#dce6ff}.foot{text-align:center;color:#7384a2;font-size:12px;margin-top:22px}
+@media(max-width:600px){.wrap{padding:28px 0}.card{padding:17px}.tabs{width:100%}.tab{flex:1;padding:10px 8px}.passrow{flex-direction:column}.ghost{padding:10px}.output-head{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<div class="brand"><div class="logo">⌑</div><div><strong>VaultText</strong><small>TEXT ENCRYPTION STUDIO</small></div></div>
+<header><h1>Keep your words <span>private.</span></h1><p class="intro">Encrypt sensitive text with a passphrase, then decrypt it whenever you need it. Everything happens locally in your browser.</p></header>
+<section class="card" aria-label="Encryption tool">
+<div class="tabs"><button class="tab active" id="encryptTab" type="button">Encrypt</button><button class="tab" id="decryptTab" type="button">Decrypt</button></div>
+<label for="message" id="messageLabel">Text to encrypt</label><textarea id="message" placeholder="Type or paste the message you want to protect..."></textarea>
+<label for="passphrase">Passphrase <span class="hint">Use a long, unique phrase</span></label><div class="passrow"><input id="passphrase" type="password" autocomplete="new-password" placeholder="Enter a strong passphrase"><button class="ghost" id="togglePass" type="button">Show</button></div>
+<div class="actions"><button class="primary" id="runBtn" type="button">Encrypt text</button><button class="secondary" id="clearBtn" type="button">Clear</button></div>
+<div class="output-head"><label for="output" id="outputLabel">Encrypted result</label><button class="secondary" id="copyBtn" type="button">Copy result</button></div>
+<textarea id="output" readonly placeholder="Your result will appear here..."></textarea><div class="status" id="status" role="status" aria-live="polite"></div>
+<div class="note"><strong>Security note:</strong> VaultText uses AES-256-GCM for authenticated encryption and PBKDF2-SHA-256 to derive a key from your passphrase. Your text and passphrase are not sent to a server. If you lose the passphrase, the encrypted text cannot be recovered.</div>
+</section><div class="foot">VaultText · A browser-based cybersecurity learning project</div>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);let mode='encrypt';const encoder=new TextEncoder(),decoder=new TextDecoder(),PREFIX='VAULTTEXT1:';
+function status(message,type=''){$('status').textContent=message;$('status').className='status '+type}
+function setMode(next){mode=next;$('encryptTab').classList.toggle('active',mode==='encrypt');$('decryptTab').classList.toggle('active',mode==='decrypt');$('messageLabel').textContent=mode==='encrypt'?'Text to encrypt':'Encrypted text';$('message').placeholder=mode==='encrypt'?'Type or paste the message you want to protect...':'Paste the complete VAULTTEXT encrypted package...';$('outputLabel').textContent=mode==='encrypt'?'Encrypted result':'Decrypted message';$('runBtn').textContent=mode==='encrypt'?'Encrypt text':'Decrypt text';$('output').placeholder=mode==='encrypt'?'Your encrypted package will appear here...':'Your decrypted message will appear here...';status('')}
+function toB64(bytes){let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary)}
+function fromB64(value){const binary=atob(value);return Uint8Array.from(binary,c=>c.charCodeAt(0))}
+async function deriveKey(passphrase,salt){const material=await crypto.subtle.importKey('raw',encoder.encode(passphrase),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function encryptText(plain,passphrase){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await deriveKey(passphrase,salt),cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,encoder.encode(plain));return PREFIX+[toB64(salt),toB64(iv),toB64(new Uint8Array(cipher))].join('.')}
+async function decryptText(packageText,passphrase){if(!packageText.startsWith(PREFIX))throw new Error('This does not look like a VaultText encrypted package.');const parts=packageText.slice(PREFIX.length).split('.');if(parts.length!==3)throw new Error('The encrypted package is incomplete or has an invalid format.');const [salt,iv,cipher]=parts.map(fromB64);if(salt.length!==16||iv.length!==12)throw new Error('The encrypted package contains invalid parameters.');const key=await deriveKey(passphrase,salt),plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,cipher);return decoder.decode(plain)}
+$('encryptTab').addEventListener('click',()=>setMode('encrypt'));$('decryptTab').addEventListener('click',()=>setMode('decrypt'));
+$('togglePass').addEventListener('click',()=>{const p=$('passphrase');p.type=p.type==='password'?'text':'password';$('togglePass').textContent=p.type==='password'?'Show':'Hide'});
+$('runBtn').addEventListener('click',async()=>{const text=$('message').value,pass=$('passphrase').value;if(!text.trim()){status('Please enter some text first.','err');return}if(!pass){status('Please enter your passphrase.','err');return}if(!window.crypto?.subtle){status('Web Crypto is unavailable. Open this page on HTTPS or http://localhost.','err');return}$('runBtn').disabled=true;status(mode==='encrypt'?'Encrypting securely...':'Decrypting...');try{const result=mode==='encrypt'?await encryptText(text,pass):await decryptText(text.trim(),pass);$('output').value=result;status(mode==='encrypt'?'Encryption complete. Save the encrypted package and remember your passphrase.':'Decryption successful.','ok')}catch(error){$('output').value='';status(mode==='decrypt'?'Decryption failed. Check the passphrase and make sure the encrypted text is complete.':(error.message||'Something went wrong.'),'err')}finally{$('runBtn').disabled=false}});
+$('copyBtn').addEventListener('click',async()=>{if(!$('output').value){status('There is no result to copy.','err');return}try{await navigator.clipboard.writeText($('output').value);status('Result copied to clipboard.','ok')}catch{$('output').select();status('Select the result and copy it manually.')}});
+$('clearBtn').addEventListener('click',()=>{$('message').value='';$('passphrase').value='';$('output').value='';status('Fields cleared.')});
+</script>
+</body>
+</html>
